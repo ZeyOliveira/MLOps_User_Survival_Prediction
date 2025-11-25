@@ -231,14 +231,11 @@ Siga estes passos para configurar e executar todo o pipeline em sua máquina loc
 
 ## 📸 Demonstração do Projeto
 
-Aqui você encontrará capturas de tela e GIFs que ilustram o funcionamento do pipeline e da aplicação.
-
-*(**Instruções para você, Zeygler:** Substitua o texto abaixo pelas suas próprias imagens e GIFs de alta qualidade.)*
+Aqui você encontrará capturas de tela que ilustram o funcionamento do pipeline e da aplicação.
 
 ### 1. **Pipeline de Ingestão e Treinamento no Airflow**
-*   Screenshot mostrando a DAG principal (`ml_pipeline_dag.py`) com todas as tarefas em estado "Success".
+*   Screenshot mostrando a DAG principal (`extract_data_from_gcp.py`) com todas as tarefas em estado "Success".
 *   Screenshot dos logs de uma tarefa chave (ex: `data_processing`) mostrando a execução.
-*   *Opcional:* GIF curto da DAG sendo acionada e as tarefas passando para verde.
 
 ### 2. **Dados no PostgreSQL**
 *   Screenshot do DBeaver mostrando a tabela `titanic` populada após a execução da DAG de ingestão, com uma query `SELECT * FROM titanic;`.
@@ -246,10 +243,11 @@ Aqui você encontrará capturas de tela e GIFs que ilustram o funcionamento do p
 ### 3. **Aplicação Flask de Previsão**
 *   Screenshot da página inicial (`http://localhost:5000`) com o formulário vazio.
 *   Screenshot do formulário preenchido e o resultado da previsão (ex: "The prediction is: Survived").
-*   GIF curto de você preenchendo o formulário e clicando em "Predict", mostrando o resultado.
+
 
 ### 4. **Monitoramento com Prometheus e Grafana**
 *   Screenshot da UI do Prometheus (`http://localhost:9090`) com uma query para `prediction_count_total` ou `drift_count_total` exibindo o valor.
+
 *   Screenshot de um dashboard no Grafana (`http://localhost:3000`) que você criou, mostrando gráficos de `prediction_count_total` e `drift_count_total` ao longo do tempo.
 *   **🎉 Demonstração de Data Drift (O MAIS IMPACTANTE!):**
     *   GIF ou vídeo curto: Comece mostrando o dashboard do Grafana com `drift_count_total` baixo/zero.
@@ -267,15 +265,7 @@ Este projeto demonstra uma compreensão prática dos princípios de MLOps:
 *   **Detecção de Drift:** A implementação do Alibi-Detect oferece um mecanismo proativo para identificar quando o modelo pode estar se tornando obsoleto devido a mudanças nos dados.
 *   **Desacoplamento:** Componentes como o Feature Store e o servidor de modelo são independentes, facilitando a manutenção e a escalabilidade.
 
-## 🔮 Próximos Passos
-
-*   **Integração com ChatGPT:** Melhorar a experiência do usuário na aplicação Flask, fornecendo explicações mais ricas ou contexto adicional para as previsões usando uma API de linguagem natural.
-*   **CI/CD:** Implementar pipelines de Integração Contínua e Entrega Contínua (CI/CD) para automatizar o deploy do código.
-*   **A/B Testing:** Adicionar funcionalidades para testar diferentes versões do modelo em produção.
-*   **Mais Modelos:** Explorar outros algoritmos de ML e comparar seu desempenho.
-*   **Containerização do Flask:** Criar um Dockerfile para o aplicativo Flask e integrá-lo ao `docker-compose.yaml`.
-
----
+              
 
 **Conecte-se comigo:**
 
