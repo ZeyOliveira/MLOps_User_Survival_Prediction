@@ -235,37 +235,25 @@ Aqui você encontrará capturas de tela que ilustram o funcionamento do pipeline
 
 ### 1. **Pipeline de Ingestão e Treinamento no Airflow**
 *   Screenshot mostrando a DAG principal (`extract_data_from_gcp.py`) com todas as tarefas em estado "Success".
-*   Screenshot dos logs de uma tarefa chave (ex: `data_processing`) mostrando a execução.
+![astroairflow](https://github.com/ZeyOliveira/MLOps_User_Survival_Prediction/blob/main/docs/airflow_dag.png)
 
 ### 2. **Dados no PostgreSQL**
 *   Screenshot do DBeaver mostrando a tabela `titanic` populada após a execução da DAG de ingestão, com uma query `SELECT * FROM titanic;`.
+![dbeaver](https://github.com/ZeyOliveira/MLOps_User_Survival_Prediction/blob/main/docs/dbeaver_postgres.png)
 
 ### 3. **Aplicação Flask de Previsão**
-*   Screenshot da página inicial (`http://localhost:5000`) com o formulário vazio.
-*   Screenshot do formulário preenchido e o resultado da previsão (ex: "The prediction is: Survived").
+*   Screenshot da página inicial (`http://localhost:5000`) com o formulário.
+![appflask](https://github.com/ZeyOliveira/MLOps_User_Survival_Prediction/blob/main/docs/app_flask.png)
 
 
 ### 4. **Monitoramento com Prometheus e Grafana**
-*   Screenshot da UI do Prometheus (`http://localhost:9090`) com uma query para `prediction_count_total` ou `drift_count_total` exibindo o valor.
+*   Screenshot da UI do Prometheus (`http://localhost:9090`).
+![prometheus](https://github.com/ZeyOliveira/MLOps_User_Survival_Prediction/blob/main/docs/prometheus.png)
 
-*   Screenshot de um dashboard no Grafana (`http://localhost:3000`) que você criou, mostrando gráficos de `prediction_count_total` e `drift_count_total` ao longo do tempo.
-*   **🎉 Demonstração de Data Drift (O MAIS IMPACTANTE!):**
-    *   GIF ou vídeo curto: Comece mostrando o dashboard do Grafana com `drift_count_total` baixo/zero.
-    *   Em seguida, na aplicação Flask, **insira dados de entrada deliberadamente "estranhos" ou muito diferentes** dos dados de referência (ex: Idade = 1000, Tarifa = -500).
-    *   Mostre o `drift_count_total` no Grafana incrementando após essas submissões, demonstrando que o Alibi-Detect identificou o desvio e o Prometheus registrou.
+*   Screenshot de um dashboard no Grafana (`http://localhost:3000`), mostrando gráficos de `prediction_count_total` e `drift_count_total` ao longo do tempo.
+![grafana](https://github.com/ZeyOliveira/MLOps_User_Survival_Prediction/blob/main/docs/grafana_datadrift.png)
 
-## ✨ MLOps em Destaque
-
-Este projeto demonstra uma compreensão prática dos princípios de MLOps:
-
-*   **Automação:** Todas as etapas do ciclo de vida do ML são automatizadas via Airflow, reduzindo erros manuais e tempo de execução.
-*   **Versionamento:** Código e dados são versionados no GitHub, garantindo reprodutibilidade e rastreabilidade.
-*   **Feature Store:** O Redis atua como um repositório centralizado e eficiente para features, desacoplando a geração do consumo e garantindo consistência.
-*   **Monitoramento e Observabilidade:** A integração com Prometheus e Grafana fornece visibilidade em tempo real sobre a saúde do serviço e o comportamento do modelo.
-*   **Detecção de Drift:** A implementação do Alibi-Detect oferece um mecanismo proativo para identificar quando o modelo pode estar se tornando obsoleto devido a mudanças nos dados.
-*   **Desacoplamento:** Componentes como o Feature Store e o servidor de modelo são independentes, facilitando a manutenção e a escalabilidade.
-
-              
+---           
 
 **Conecte-se comigo:**
 
