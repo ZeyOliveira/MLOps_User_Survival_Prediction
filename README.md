@@ -2,9 +2,9 @@
 
 ## Visão Geral do Projeto
 
-Este projeto implementa uma solução de Machine Learning (ML) ponta-a-ponta para prever a sobrevivência de indivíduos no desastre do Titanic. O foco principal é demonstrar um pipeline MLOps robusto, que abrange desde a ingestão de dados em nuvem até o monitoramento contínuo do modelo em produção, garantindo automação, escalabilidade e observabilidade.
+Este projeto implementa uma solução de Machine Learning (ML) ponta-a-ponta para prever a sobrevivência de indivíduos no desastre do Titanic. O foco principal é demonstrar um pipeline MLOps robusto, que abrange desde a ingestão de dados em nuvem até o monitoramento do modelo em produção, garantindo automação, escalabilidade e observabilidade.
 
-Desenvolvido como parte dos meus estudos em Ciência de Dados, com ênfase em Power BI, Excel e SQL, este projeto consolida conhecimentos em engenharia de dados, pré-processamento, treinamento de modelos e as melhores práticas de MLOps.
+Desenvolvido como parte dos meus estudos em Ciência de Dados, MLOps, GenAI, este projeto consolida conhecimentos em engenharia de dados, pré-processamento, treinamento de modelos e as melhores práticas de MLOps.
 
 ## �� Destaques MLOps e Tecnológicos
 
