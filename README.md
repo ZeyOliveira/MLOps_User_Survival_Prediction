@@ -185,7 +185,7 @@ Siga estes passos para configurar e executar todo o pipeline em sua máquina loc
     ```bash
     docker-compose up -d
     ```
-    Isso iniciará Redis, PostgreSQL, Prometheus, Grafana e o ambiente Astro Airflow.
+    Isso iniciará Prometheus, Grafana.
 
 5.  **Inicie o Ambiente Airflow:**
     ```bash
@@ -199,18 +199,34 @@ Siga estes passos para configurar e executar todo o pipeline em sua máquina loc
         *   Uma conexão `postgres_default` usando o tipo `Postgres`, Host `postgres` (nome do serviço Docker), Schema `user_survival_db`, Login `postgres`, Password `postgres`.
 
 7.  **Habilite e Rode a DAG Principal:**
-    *   Na UI do Airflow, procure pela DAG `ml_pipeline_dag.py` (ou o nome que você deu à sua DAG principal).
+    *   Na UI do Airflow, procure pela DAG `extract_data_from_gcp.py` (ou o nome que você deu à sua DAG principal).
     *   Ative-a (toggle).
     *   Acione-a manualmente para iniciar o pipeline completo.
+    *   Ou rode o arquivo `setup_connections_astro.py`, para contruir a DAG, com o arquivo `config.yml` com esse conteúdo:
+  ```
+  connections:
+    - conn_id: google_cloud_default
+      conn_type: google_cloud_platform
+      key_path: /usr/local/airflow/include/gcp-key.json
+      schema: https://www.googleapis.com/auth/cloud-platform
+  
+    - conn_id: postgres_default
+      conn_type: postgres
+      host: localhost
+      login: postgres
+      password: postgres
+      schema: public
+      port: 5432
+  ```
 
 8.  **Execute o Aplicativo Flask:**
     *   Após o pipeline do Airflow ter sido executado com sucesso e o modelo ter sido treinado e salvo (e as features no Redis), você pode iniciar o aplicativo Flask.
     *   Abra um novo terminal na raiz do projeto e execute:
         ```bash
-        python app/app.py
+        python application.py
         ```
     *   Acesse o aplicativo em `http://localhost:5000`.
-    *   As métricas do Prometheus estarão disponíveis em `http://localhost:8000/metrics`.
+    *   As métricas do Prometheus estarão disponíveis em `http://localhost:9090/`.
     *   Acesse o Grafana em `http://localhost:3000` (admin/admin) e configure uma fonte de dados Prometheus apontando para `http://prometheus:9090`. Crie um dashboard para visualizar `prediction_count_total` e `drift_count_total`.
 
 ## 📸 Demonstração do Projeto
@@ -261,4 +277,8 @@ Este projeto demonstra uma compreensão prática dos princípios de MLOps:
 
 ---
 
-Este `README.md` apresenta seu trabalho de forma profissional e destaca as habilidades mais procuradas no mercado de TI/MLOps, Zeygler. Lembre-se de personalizar as instruções e, principalmente, incluir as imagens e GIFs! Boa sorte!
+**Conecte-se comigo:**
+
+*   **LinkedIn:** https://www.linkedin.com/in/zeygleroliveira/
+*   **GitHub:** https://github.com/ZeyOliveira
+*   **Gmail:** zeyglerdasilva@gmail.com
