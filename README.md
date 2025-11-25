@@ -68,7 +68,7 @@ A arquitetura do projeto foi projetada para ser modular e extensível, integrand
 
 ## 🛠 Tecnologias Utilizadas
 
-*   **Linguagem:** Python (3.9+)
+*   **Linguagem:** Python (3.12+)
 *   **Orquestração:** Apache Airflow (via Astro CLI)
 *   **Nuvem:** Google Cloud Platform (GCS para armazenamento de dados brutos)
 *   **Banco de Dados:** PostgreSQL (armazenamento intermediário de dados)
@@ -83,8 +83,8 @@ A arquitetura do projeto foi projetada para ser modular e extensível, integrand
 
 ## �� Componentes Chave do Pipeline
 
-1.  **`dags/extract_titanic_data.py` (DAG de Ingestão de Dados Brutos)**
-    *   **Função:** Orquestra a extração do arquivo `Titanic-Dataset.csv` de um bucket no GCS, faz um pré-processamento leve (ETL) e carrega os dados brutos na tabela `titanic` em um banco de dados PostgreSQL local.
+1.  **`dags/extract_data_from_gcp.py` (DAG de Ingestão de Dados Brutos)**
+    *   **Função:** Orquestra a extração do arquivo `Titanic-Dataset.csv` de um bucket no GCS, faz um pré-processamento leve (ETL) e carrega os dados brutos na tabela `titanic` em um banco de dados PostgreSQL local rodando num conteiner Docker.
     *   **Tecnologias:** Apache Airflow, `apache-airflow-providers-google`, `apache-airflow-providers-postgres`.
 
 2.  **`src/data_ingestion.py` (Script de Preparação Inicial de Dados)**
@@ -93,23 +93,23 @@ A arquitetura do projeto foi projetada para ser modular e extensível, integrand
 
 3.  **`src/feature_store.py` (Módulo de Feature Store com Redis)**
     *   **Função:** Atua como um *Feature Store* simples, fornecendo métodos para conectar ao Redis, serializar features (JSON) de entidades e armazená-las/recuperá-las de forma individual ou em lote. Projetado para baixa latência.
-    *   **Tecnologias:** Redis (via `redis-py` cliente Python).
+    *   **Tecnologias:** Redis rodando dentro do Docker.
 
-4.  **`src/data_processing.py` (Módulo de Pré-processamento, Balanceamento e Armazenamento de Features)**
+4.  **`src/data_processing.py` (Módulo de Pré-processamento, Balanceamento, Feature Engineering, Encoding e Armazenamento de Features)**
     *   **Função:** Carrega os CSVs de treino e teste, executa limpeza de dados, preenchimento de valores ausentes, codificação de variáveis categóricas, engenharia de novas features (`Familysize`, `HasCabin`, `Title`, `Pclass_Fare`, `Age_Fare`), tratamento de desbalanceamento usando SMOTE nos dados de treino, e finalmente armazena as features processadas no Redis Feature Store.
     *   **Tecnologias:** Pandas, Scikit-learn, Imblearn, `RedisFeatureStore`.
 
 5.  **`src/model_training.py` (Módulo de Treinamento do Modelo)**
-    *   **Função:** Recupera as features processadas e balanceadas do Redis Feature Store, treina um modelo de Machine Learning (ex: Random Forest) para prever a sobrevivência, avalia seu desempenho e salva o modelo treinado (ex: `random_forest_model.pkl`) no diretório `artifacts/models/`.
+    *   **Função:** Recupera as features processadas e balanceadas do Redis Feature Store, busca os melhores hyperparâmetros usando `RandomizedSearchCV` treina um modelo de Machine Learning `RandomForestClassifier` para prever a sobrevivência, avalia seu desempenho e salva o modelo treinado (ex: `random_forest_model.pkl`) no diretório `artifacts/models/`.
     *   **Tecnologias:** Scikit-learn, `RedisFeatureStore`.
 
-6.  **`dags/ml_pipeline_dag.py` (DAG Principal do Pipeline MLOps)**
-    *   **Função:** Orquestra a execução sequencial de todas as etapas do pipeline: Ingestão de Dados Brutos (via `extract_titanic_data.py`), Preparação Inicial de Dados (`DataIngestion.py`), Pré-processamento/Feature Engineering/Balanceamento (`DataProcessing.py`) e Treinamento do Modelo (`ModelTraining.py`).
-    *   **Tecnologias:** Apache Airflow.
+6.  **`pipeline/training_pipeline.py` (Pipeline Principal do MLOps)**
+    *   **Função:** Orquestra a execução sequencial de todas as etapas do pipeline: Ingestão de Dados Brutos (via `data_ingestion.py`), Pré-processamento/Feature Engineering/Balanceamento (`data_processing.py`) e Treinamento do Modelo (`model_training.py`).
+    *   **Tecnologias:** Apache Airflow, Feature Store, logger, CustomException.
 
-7.  **`app/app.py` (Servidor Flask para Servir o Modelo e Monitorar Drift)**
+7.  **`application.py` (Servidor Flask para Servir o Modelo e Monitorar Drift)**
     *   **Função:** Expõe o modelo de ML treinado via uma API web e interface de usuário. Recebe inputs do usuário, faz previsões e, crucialmente, monitora a qualidade dos dados de entrada em tempo real.
-    *   **Tecnologias:** Flask, `Alibi-Detect` (KSDrift), `prometheus_client`, `RedisFeatureStore`, Scikit-learn.
+    *   **Tecnologias:** Flask, `Alibi-Detect` (KSDrift), `prometheus_client`, `Grafana`, `RedisFeatureStore`, Scikit-learn.
     *   **Rotas:**
         *   `/`: Renderiza o formulário de previsão (`index.html`).
         *   `/predict` (POST): Processa inputs, detecta drift, faz previsão e exibe resultado.
@@ -122,7 +122,7 @@ Siga estes passos para configurar e executar todo o pipeline em sua máquina loc
 ### Pré-requisitos
 
 *   Docker e Docker Compose
-*   Python 3.9+
+*   Python 3.12+
 *   Astro CLI (para gerenciar o ambiente Airflow)
 *   Uma conta GCP com um bucket configurado e uma chave de conta de serviço (JSON) para acesso ao GCS.
 
@@ -130,8 +130,8 @@ Siga estes passos para configurar e executar todo o pipeline em sua máquina loc
 
 1.  **Clone o Repositório:**
     ```bash
-    git clone https://github.com/seu-usuario/user-survival-prediction.git
-    cd user-survival-prediction
+    git clone https://github.com/ZeyOliveira/MLOps_User_Survival_Prediction.git
+    cd user_survival_prediction
     ```
 
 2.  **Configuração do GCP:**
@@ -145,39 +145,8 @@ Siga estes passos para configurar e executar todo o pipeline em sua máquina loc
         ```
     *   O Airflow usará o `requirements.txt` para instalar as dependências. Verifique se ele contém todas as bibliotecas necessárias.
     *   **Ajuste o `docker-compose.yaml`:**
-        *   Certifique-se de que o `docker-compose.yaml` inclua serviços para **PostgreSQL**, **Redis**, **Prometheus** e **Grafana**, além dos serviços padrão do Astro Airflow. Exemplo de estrutura no `docker-compose.yaml`:
-            ```yaml
-            # ... serviços do Airflow ...
-            
-            redis:
-              image: redis:6.2-alpine
-              command: redis-server --appendonly yes
-              ports:
-                - "6379:6379"
-              volumes:
-                - redis_data:/data
-              healthcheck:
-                test: ["CMD", "redis-cli", "ping"]
-                interval: 5s
-                timeout: 30s
-                retries: 5
-            
-            postgres:
-              image: postgres:13
-              ports:
-                - "5432:5432"
-              environment:
-                POSTGRES_DB: user_survival_db
-                POSTGRES_USER: postgres
-                POSTGRES_PASSWORD: postgres
-              volumes:
-                - postgres_data:/var/lib/postgresql/data
-              healthcheck:
-                test: ["CMD-SHELL", "pg_isready -U postgres -d user_survival_db"]
-                interval: 5s
-                timeout: 30s
-                retries: 5
-            
+        *   Certifique-se de que o `docker-compose.yml` inclua serviços, **Prometheus** e **Grafana**, além dos serviços padrão do Astro Airflow. Exemplo de estrutura no `docker-compose.yaml`:
+            ```yaml            
             prometheus:
               image: prom/prometheus:latest
               command: --config.file=/etc/prometheus/prometheus.yml
@@ -197,7 +166,6 @@ Siga estes passos para configurar e executar todo o pipeline em sua máquina loc
                 - grafana_data:/var/lib/grafana
             
             volumes:
-              redis_data:
               postgres_data:
               grafana_data:
             ```
@@ -217,7 +185,7 @@ Siga estes passos para configurar e executar todo o pipeline em sua máquina loc
     ```bash
     docker-compose up -d
     ```
-    Isso iniciará Redis, PostgreSQL, Prometheus, Grafana e o ambiente Astro Airflow.
+    Isso iniciará Prometheus, Grafana.
 
 5.  **Inicie o Ambiente Airflow:**
     ```bash
@@ -231,30 +199,43 @@ Siga estes passos para configurar e executar todo o pipeline em sua máquina loc
         *   Uma conexão `postgres_default` usando o tipo `Postgres`, Host `postgres` (nome do serviço Docker), Schema `user_survival_db`, Login `postgres`, Password `postgres`.
 
 7.  **Habilite e Rode a DAG Principal:**
-    *   Na UI do Airflow, procure pela DAG `ml_pipeline_dag.py` (ou o nome que você deu à sua DAG principal).
+    *   Na UI do Airflow, procure pela DAG `extract_data_from_gcp.py` (ou o nome que você deu à sua DAG principal).
     *   Ative-a (toggle).
     *   Acione-a manualmente para iniciar o pipeline completo.
+    *   Ou rode o arquivo `setup_connections_astro.py`, para contruir a DAG, com o arquivo `config.yml` com esse conteúdo:
+  ```
+  connections:
+    - conn_id: google_cloud_default
+      conn_type: google_cloud_platform
+      key_path: /usr/local/airflow/include/gcp-key.json
+      schema: https://www.googleapis.com/auth/cloud-platform
+  
+    - conn_id: postgres_default
+      conn_type: postgres
+      host: localhost
+      login: postgres
+      password: postgres
+      schema: public
+      port: 5432
+  ```
 
 8.  **Execute o Aplicativo Flask:**
     *   Após o pipeline do Airflow ter sido executado com sucesso e o modelo ter sido treinado e salvo (e as features no Redis), você pode iniciar o aplicativo Flask.
     *   Abra um novo terminal na raiz do projeto e execute:
         ```bash
-        python app/app.py
+        python application.py
         ```
     *   Acesse o aplicativo em `http://localhost:5000`.
-    *   As métricas do Prometheus estarão disponíveis em `http://localhost:8000/metrics`.
+    *   As métricas do Prometheus estarão disponíveis em `http://localhost:9090/`.
     *   Acesse o Grafana em `http://localhost:3000` (admin/admin) e configure uma fonte de dados Prometheus apontando para `http://prometheus:9090`. Crie um dashboard para visualizar `prediction_count_total` e `drift_count_total`.
 
 ## 📸 Demonstração do Projeto
 
-Aqui você encontrará capturas de tela e GIFs que ilustram o funcionamento do pipeline e da aplicação.
-
-*(**Instruções para você, Zeygler:** Substitua o texto abaixo pelas suas próprias imagens e GIFs de alta qualidade.)*
+Aqui você encontrará capturas de tela que ilustram o funcionamento do pipeline e da aplicação.
 
 ### 1. **Pipeline de Ingestão e Treinamento no Airflow**
-*   Screenshot mostrando a DAG principal (`ml_pipeline_dag.py`) com todas as tarefas em estado "Success".
+*   Screenshot mostrando a DAG principal (`extract_data_from_gcp.py`) com todas as tarefas em estado "Success".
 *   Screenshot dos logs de uma tarefa chave (ex: `data_processing`) mostrando a execução.
-*   *Opcional:* GIF curto da DAG sendo acionada e as tarefas passando para verde.
 
 ### 2. **Dados no PostgreSQL**
 *   Screenshot do DBeaver mostrando a tabela `titanic` populada após a execução da DAG de ingestão, com uma query `SELECT * FROM titanic;`.
@@ -262,10 +243,11 @@ Aqui você encontrará capturas de tela e GIFs que ilustram o funcionamento do p
 ### 3. **Aplicação Flask de Previsão**
 *   Screenshot da página inicial (`http://localhost:5000`) com o formulário vazio.
 *   Screenshot do formulário preenchido e o resultado da previsão (ex: "The prediction is: Survived").
-*   GIF curto de você preenchendo o formulário e clicando em "Predict", mostrando o resultado.
+
 
 ### 4. **Monitoramento com Prometheus e Grafana**
 *   Screenshot da UI do Prometheus (`http://localhost:9090`) com uma query para `prediction_count_total` ou `drift_count_total` exibindo o valor.
+
 *   Screenshot de um dashboard no Grafana (`http://localhost:3000`) que você criou, mostrando gráficos de `prediction_count_total` e `drift_count_total` ao longo do tempo.
 *   **🎉 Demonstração de Data Drift (O MAIS IMPACTANTE!):**
     *   GIF ou vídeo curto: Comece mostrando o dashboard do Grafana com `drift_count_total` baixo/zero.
@@ -283,14 +265,10 @@ Este projeto demonstra uma compreensão prática dos princípios de MLOps:
 *   **Detecção de Drift:** A implementação do Alibi-Detect oferece um mecanismo proativo para identificar quando o modelo pode estar se tornando obsoleto devido a mudanças nos dados.
 *   **Desacoplamento:** Componentes como o Feature Store e o servidor de modelo são independentes, facilitando a manutenção e a escalabilidade.
 
-## 🔮 Próximos Passos
+              
 
-*   **Integração com ChatGPT:** Melhorar a experiência do usuário na aplicação Flask, fornecendo explicações mais ricas ou contexto adicional para as previsões usando uma API de linguagem natural.
-*   **CI/CD:** Implementar pipelines de Integração Contínua e Entrega Contínua (CI/CD) para automatizar o deploy do código.
-*   **A/B Testing:** Adicionar funcionalidades para testar diferentes versões do modelo em produção.
-*   **Mais Modelos:** Explorar outros algoritmos de ML e comparar seu desempenho.
-*   **Containerização do Flask:** Criar um Dockerfile para o aplicativo Flask e integrá-lo ao `docker-compose.yaml`.
+**Conecte-se comigo:**
 
----
-
-Este `README.md` apresenta seu trabalho de forma profissional e destaca as habilidades mais procuradas no mercado de TI/MLOps, Zeygler. Lembre-se de personalizar as instruções e, principalmente, incluir as imagens e GIFs! Boa sorte!
+*   **LinkedIn:** https://www.linkedin.com/in/zeygleroliveira/
+*   **GitHub:** https://github.com/ZeyOliveira
+*   **Gmail:** zeyglerdasilva@gmail.com
