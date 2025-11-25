@@ -68,7 +68,7 @@ A arquitetura do projeto foi projetada para ser modular e extensível, integrand
 
 ## 🛠 Tecnologias Utilizadas
 
-*   **Linguagem:** Python (3.9+)
+*   **Linguagem:** Python (3.12+)
 *   **Orquestração:** Apache Airflow (via Astro CLI)
 *   **Nuvem:** Google Cloud Platform (GCS para armazenamento de dados brutos)
 *   **Banco de Dados:** PostgreSQL (armazenamento intermediário de dados)
@@ -83,8 +83,8 @@ A arquitetura do projeto foi projetada para ser modular e extensível, integrand
 
 ## �� Componentes Chave do Pipeline
 
-1.  **`dags/extract_titanic_data.py` (DAG de Ingestão de Dados Brutos)**
-    *   **Função:** Orquestra a extração do arquivo `Titanic-Dataset.csv` de um bucket no GCS, faz um pré-processamento leve (ETL) e carrega os dados brutos na tabela `titanic` em um banco de dados PostgreSQL local.
+1.  **`dags/extract_data_from_gcp.py` (DAG de Ingestão de Dados Brutos)**
+    *   **Função:** Orquestra a extração do arquivo `Titanic-Dataset.csv` de um bucket no GCS, faz um pré-processamento leve (ETL) e carrega os dados brutos na tabela `titanic` em um banco de dados PostgreSQL local rodando num conteiner Docker.
     *   **Tecnologias:** Apache Airflow, `apache-airflow-providers-google`, `apache-airflow-providers-postgres`.
 
 2.  **`src/data_ingestion.py` (Script de Preparação Inicial de Dados)**
@@ -93,23 +93,23 @@ A arquitetura do projeto foi projetada para ser modular e extensível, integrand
 
 3.  **`src/feature_store.py` (Módulo de Feature Store com Redis)**
     *   **Função:** Atua como um *Feature Store* simples, fornecendo métodos para conectar ao Redis, serializar features (JSON) de entidades e armazená-las/recuperá-las de forma individual ou em lote. Projetado para baixa latência.
-    *   **Tecnologias:** Redis (via `redis-py` cliente Python).
+    *   **Tecnologias:** Redis rodando dentro do Docker.
 
-4.  **`src/data_processing.py` (Módulo de Pré-processamento, Balanceamento e Armazenamento de Features)**
+4.  **`src/data_processing.py` (Módulo de Pré-processamento, Balanceamento, Feature Engineering, Encoding e Armazenamento de Features)**
     *   **Função:** Carrega os CSVs de treino e teste, executa limpeza de dados, preenchimento de valores ausentes, codificação de variáveis categóricas, engenharia de novas features (`Familysize`, `HasCabin`, `Title`, `Pclass_Fare`, `Age_Fare`), tratamento de desbalanceamento usando SMOTE nos dados de treino, e finalmente armazena as features processadas no Redis Feature Store.
     *   **Tecnologias:** Pandas, Scikit-learn, Imblearn, `RedisFeatureStore`.
 
 5.  **`src/model_training.py` (Módulo de Treinamento do Modelo)**
-    *   **Função:** Recupera as features processadas e balanceadas do Redis Feature Store, treina um modelo de Machine Learning (ex: Random Forest) para prever a sobrevivência, avalia seu desempenho e salva o modelo treinado (ex: `random_forest_model.pkl`) no diretório `artifacts/models/`.
+    *   **Função:** Recupera as features processadas e balanceadas do Redis Feature Store, busca os melhores hyperparâmetros usando `RandomizedSearchCV` treina um modelo de Machine Learning `RandomForestClassifier` para prever a sobrevivência, avalia seu desempenho e salva o modelo treinado (ex: `random_forest_model.pkl`) no diretório `artifacts/models/`.
     *   **Tecnologias:** Scikit-learn, `RedisFeatureStore`.
 
-6.  **`dags/ml_pipeline_dag.py` (DAG Principal do Pipeline MLOps)**
-    *   **Função:** Orquestra a execução sequencial de todas as etapas do pipeline: Ingestão de Dados Brutos (via `extract_titanic_data.py`), Preparação Inicial de Dados (`DataIngestion.py`), Pré-processamento/Feature Engineering/Balanceamento (`DataProcessing.py`) e Treinamento do Modelo (`ModelTraining.py`).
-    *   **Tecnologias:** Apache Airflow.
+6.  **`pipeline/training_pipeline.py` (Pipeline Principal do MLOps)**
+    *   **Função:** Orquestra a execução sequencial de todas as etapas do pipeline: Ingestão de Dados Brutos (via `data_ingestion.py`), Pré-processamento/Feature Engineering/Balanceamento (`data_processing.py`) e Treinamento do Modelo (`model_training.py`).
+    *   **Tecnologias:** Apache Airflow, Feature Store, logger, CustomException.
 
-7.  **`app/app.py` (Servidor Flask para Servir o Modelo e Monitorar Drift)**
+7.  **`application.py` (Servidor Flask para Servir o Modelo e Monitorar Drift)**
     *   **Função:** Expõe o modelo de ML treinado via uma API web e interface de usuário. Recebe inputs do usuário, faz previsões e, crucialmente, monitora a qualidade dos dados de entrada em tempo real.
-    *   **Tecnologias:** Flask, `Alibi-Detect` (KSDrift), `prometheus_client`, `RedisFeatureStore`, Scikit-learn.
+    *   **Tecnologias:** Flask, `Alibi-Detect` (KSDrift), `prometheus_client`, `Grafana`, `RedisFeatureStore`, Scikit-learn.
     *   **Rotas:**
         *   `/`: Renderiza o formulário de previsão (`index.html`).
         *   `/predict` (POST): Processa inputs, detecta drift, faz previsão e exibe resultado.
@@ -122,7 +122,7 @@ Siga estes passos para configurar e executar todo o pipeline em sua máquina loc
 ### Pré-requisitos
 
 *   Docker e Docker Compose
-*   Python 3.9+
+*   Python 3.12+
 *   Astro CLI (para gerenciar o ambiente Airflow)
 *   Uma conta GCP com um bucket configurado e uma chave de conta de serviço (JSON) para acesso ao GCS.
 
@@ -130,8 +130,8 @@ Siga estes passos para configurar e executar todo o pipeline em sua máquina loc
 
 1.  **Clone o Repositório:**
     ```bash
-    git clone https://github.com/seu-usuario/user-survival-prediction.git
-    cd user-survival-prediction
+    git clone https://github.com/ZeyOliveira/MLOps_User_Survival_Prediction.git
+    cd user_survival_prediction
     ```
 
 2.  **Configuração do GCP:**
@@ -145,39 +145,8 @@ Siga estes passos para configurar e executar todo o pipeline em sua máquina loc
         ```
     *   O Airflow usará o `requirements.txt` para instalar as dependências. Verifique se ele contém todas as bibliotecas necessárias.
     *   **Ajuste o `docker-compose.yaml`:**
-        *   Certifique-se de que o `docker-compose.yaml` inclua serviços para **PostgreSQL**, **Redis**, **Prometheus** e **Grafana**, além dos serviços padrão do Astro Airflow. Exemplo de estrutura no `docker-compose.yaml`:
-            ```yaml
-            # ... serviços do Airflow ...
-            
-            redis:
-              image: redis:6.2-alpine
-              command: redis-server --appendonly yes
-              ports:
-                - "6379:6379"
-              volumes:
-                - redis_data:/data
-              healthcheck:
-                test: ["CMD", "redis-cli", "ping"]
-                interval: 5s
-                timeout: 30s
-                retries: 5
-            
-            postgres:
-              image: postgres:13
-              ports:
-                - "5432:5432"
-              environment:
-                POSTGRES_DB: user_survival_db
-                POSTGRES_USER: postgres
-                POSTGRES_PASSWORD: postgres
-              volumes:
-                - postgres_data:/var/lib/postgresql/data
-              healthcheck:
-                test: ["CMD-SHELL", "pg_isready -U postgres -d user_survival_db"]
-                interval: 5s
-                timeout: 30s
-                retries: 5
-            
+        *   Certifique-se de que o `docker-compose.yml` inclua serviços, **Prometheus** e **Grafana**, além dos serviços padrão do Astro Airflow. Exemplo de estrutura no `docker-compose.yaml`:
+            ```yaml            
             prometheus:
               image: prom/prometheus:latest
               command: --config.file=/etc/prometheus/prometheus.yml
@@ -197,7 +166,6 @@ Siga estes passos para configurar e executar todo o pipeline em sua máquina loc
                 - grafana_data:/var/lib/grafana
             
             volumes:
-              redis_data:
               postgres_data:
               grafana_data:
             ```
