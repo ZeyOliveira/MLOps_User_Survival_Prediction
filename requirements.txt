@@ -1,0 +1,10 @@
+pandas
+numpy
+setuptools
+# apache-airflow-providers-postgres
+# apache-airflow-providers-google
+psycopg2   # apartir daqui não é necessário para o astro airflow
+scikit-learn
+imbalanced-learn
+ipykernel
+redis
